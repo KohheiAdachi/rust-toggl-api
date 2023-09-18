@@ -1,9 +1,11 @@
 extern crate serde_json;
 extern crate tokio;
+use chrono::{DateTime, Local, Timelike};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 use reqwest::Method;
 use serde::Deserialize;
+
 #[derive(Debug, Deserialize)]
 struct TimeEntry {
     at: String,
@@ -80,6 +82,24 @@ async fn main() -> Result<(), reqwest::Error> {
     // let body = res.text().await?;
     let body = res.json::<Vec<TimeEntry>>().await?;
     println!("{:?}", body);
+
+    for entry in body {
+        if entry.stop == None {
+            continue;
+        }
+        let start = DateTime::parse_from_rfc3339(&entry.start).unwrap();
+        let stop = DateTime::parse_from_rfc3339(&entry.stop.unwrap()).unwrap();
+
+        println!(
+            "|{}|{}|{}:{}||{}:{}|",
+            entry.description,
+            entry.duration,
+            start.hour(),
+            start.minute(),
+            stop.hour(),
+            stop.minute()
+        );
+    }
 
     Ok(())
 }
