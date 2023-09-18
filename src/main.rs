@@ -26,6 +26,34 @@ struct TimeEntry {
     workspace_id: i64,
 }
 
+fn get_start_date() -> String {
+    let dt = Local::now();
+    let startTime = dt
+        .with_hour(0)
+        .unwrap()
+        .with_minute(0)
+        .unwrap()
+        .with_second(0)
+        .unwrap()
+        .to_rfc3339()
+        .to_string();
+    return startTime;
+}
+
+fn get_end_date() -> String {
+    let dt = Local::now();
+    let startTime = dt
+        .with_hour(23)
+        .unwrap()
+        .with_minute(59)
+        .unwrap()
+        .with_second(59)
+        .unwrap()
+        .to_rfc3339()
+        .to_string();
+    return startTime;
+}
+
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error> {
     let client = Client::new();
@@ -34,11 +62,15 @@ async fn main() -> Result<(), reqwest::Error> {
         Err(_e) => "dev".to_string(),
     };
 
+    let start_time = get_start_date();
+    let end_time = get_end_date();
+
     let res = client
         .request(
             Method::GET,
             "https://api.track.toggl.com/api/v9/me/time_entries".to_string(),
         )
+        .query(&[("start_date", start_time), ("end_date", end_time)])
         // HACK: passwordがOption<P>なので、Some("api_token")を渡す
         .basic_auth(api_token, Some("api_token"))
         .header(CONTENT_TYPE, "application/json")
