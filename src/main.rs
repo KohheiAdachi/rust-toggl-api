@@ -1,6 +1,6 @@
 extern crate serde_json;
 extern crate tokio;
-use chrono::{DateTime, Local, Timelike};
+use chrono::{DateTime, FixedOffset, Local, Timelike};
 use reqwest::header::CONTENT_TYPE;
 use reqwest::Client;
 use reqwest::Method;
@@ -30,7 +30,7 @@ struct TimeEntry {
 
 fn get_start_date() -> String {
     let dt = Local::now();
-    let startTime = dt
+    let start_time = dt
         .with_hour(0)
         .unwrap()
         .with_minute(0)
@@ -39,12 +39,12 @@ fn get_start_date() -> String {
         .unwrap()
         .to_rfc3339()
         .to_string();
-    return startTime;
+    return start_time;
 }
 
 fn get_end_date() -> String {
     let dt = Local::now();
-    let startTime = dt
+    let start_time = dt
         .with_hour(23)
         .unwrap()
         .with_minute(59)
@@ -53,7 +53,7 @@ fn get_end_date() -> String {
         .unwrap()
         .to_rfc3339()
         .to_string();
-    return startTime;
+    return start_time;
 }
 
 #[tokio::main]
@@ -82,22 +82,30 @@ async fn main() -> Result<(), reqwest::Error> {
     // let body = res.text().await?;
     let body = res.json::<Vec<TimeEntry>>().await?;
     println!("{:?}", body);
-
-    for entry in body {
+    let reverse = body.iter().rev();
+    println!("|作業内容|時間|開始|終了|");
+    println!("|------|-|-----|------|");
+    for entry in reverse {
         if entry.stop == None {
             continue;
         }
         let start = DateTime::parse_from_rfc3339(&entry.start).unwrap();
-        let stop = DateTime::parse_from_rfc3339(&entry.stop.unwrap()).unwrap();
+
+        let start_jst = start.with_timezone(&FixedOffset::east_opt(9 * 3600).unwrap());
+
+        let stop = DateTime::parse_from_rfc3339(&entry.stop.clone().unwrap()).unwrap();
+
+        let stop_jst = stop.with_timezone(&FixedOffset::east_opt(9 * 3600).unwrap());
 
         println!(
-            "|{}|{}|{}:{}||{}:{}|",
+            "|{}|{:0>2}:{:0>2}|{:0>2}:{:0>2}|{:0>2}:{:0>2}|",
             entry.description,
-            entry.duration,
-            start.hour(),
-            start.minute(),
-            stop.hour(),
-            stop.minute()
+            entry.duration / 3600,
+            (entry.duration % 3600) / 60,
+            start_jst.hour(),
+            start_jst.minute(),
+            stop_jst.hour(),
+            stop_jst.minute()
         );
     }
 
